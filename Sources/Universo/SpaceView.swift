@@ -6,7 +6,7 @@ struct SpaceView: View {
     @State private var lastMagnification: CGFloat = 1
 
     var body: some View {
-        TimelineView(.animation) { tl in
+        TimelineView(.animation(minimumInterval: 1.0 / 30)) { tl in
             Canvas { ctx, size in
                 SpaceRenderer(model: model).render(&ctx, size: size, date: tl.date)
             }
