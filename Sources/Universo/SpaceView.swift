@@ -241,8 +241,23 @@ struct SpaceRenderer {
             let s = u.stars[c.idx]
             let label = s.label.count > 34 ? String(s.label.prefix(33)) + "…" : s.label
             let r = s.size * grow
-            let rect = CGRect(x: p.x + r + 4, y: p.y - 8, width: Double(label.count) * 5.9 + 6, height: 16)
-            if c.prio >= 2, taken.contains(where: { $0.intersects(rect) }) { continue }
+            var rect = CGRect(x: p.x + r + 4, y: p.y - 8, width: Double(label.count) * 6.7 + 8, height: 16)
+            var shift = 0.0
+            var placed = false
+            for step in 0..<6 {
+                let dy = Double(step) * 15
+                let trial = rect.offsetBy(dx: 0, dy: dy)
+                if !taken.contains(where: { $0.intersects(trial) }) {
+                    rect = trial
+                    shift = dy
+                    placed = true
+                    break
+                }
+            }
+            if !placed {
+                if c.prio >= 2 { continue }
+                shift = 0
+            }
             taken.append(rect)
             let strong = c.prio <= 1
             let txt = ctx.resolve(
@@ -250,7 +265,7 @@ struct SpaceRenderer {
                     .font(.system(size: 10.5, weight: strong ? .semibold : .medium))
                     .foregroundStyle(Color.white.opacity(strong ? 0.95 : 0.7 * dim(c.idx) + 0.1))
             )
-            ctx.draw(txt, at: CGPoint(x: p.x + r + 5, y: p.y), anchor: .leading)
+            ctx.draw(txt, at: CGPoint(x: p.x + r + 5, y: p.y + shift), anchor: .leading)
         }
     }
 }
