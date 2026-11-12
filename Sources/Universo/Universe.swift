@@ -156,6 +156,68 @@ final class Universe {
             galaxies[g].radius = rmax + 26
         }
 
+        layoutGalaxies(rng: &rng)
+        computeBounds()
+    }
+
+    private func layoutGalaxies(rng: inout SeededRNG) {
+        let G = galaxies.count
+        guard G > 1 else { return }
+        var weights: [Int: Int] = [:]
+        for l in links where l.cross {
+            let a = min(stars[l.a].galaxy, stars[l.b].galaxy)
+            let b = max(stars[l.a].galaxy, stars[l.b].galaxy)
+            weights[a * 1000 + b, default: 0] += 1
+        }
+        let order = galaxies.indices.sorted { galaxies[$0].members.count > galaxies[$1].members.count }
+        var pos = [CGPoint](repeating: .zero, count: G)
+        for (k, g) in order.enumerated() {
+            let r = 150 * Double(k).squareRoot()
+            let a = Double(k) * 2.39996
+            pos[g] = CGPoint(x: r * cos(a), y: r * sin(a))
+        }
+        for iter in 0..<900 {
+            var f = [CGPoint](repeating: .zero, count: G)
+            for i in 0..<G {
+                for j in (i + 1)..<G {
+                    let dx = pos[j].x - pos[i].x
+                    let dy = pos[j].y - pos[i].y
+                    let dist = max(hypot(dx, dy), 1)
+                    let ux = dx / dist, uy = dy / dist
+                    let minD = galaxies[i].radius + galaxies[j].radius + 55
+                    let w = weights[i * 1000 + j] ?? 0
+                    var force: CGFloat = 0
+                    if dist < minD {
+                        force = -(minD - dist) * 0.35
+                    } else if w > 0 {
+                        let target = minD + 140 / CGFloat(1 + w)
+                        force = (dist - target) * 0.02 * CGFloat(min(w, 6))
+                    }
+                    f[i].x += ux * force; f[i].y += uy * force
+                    f[j].x -= ux * force; f[j].y -= uy * force
+                }
+                f[i].x -= pos[i].x * 0.002
+                f[i].y -= pos[i].y * 0.002
+            }
+            let cool = 0.8 * pow(0.995, Double(iter))
+            for i in 0..<G {
+                pos[i].x += f[i].x * cool
+                pos[i].y += f[i].y * cool
+            }
+        }
+        for g in 0..<G { galaxies[g].center = pos[g] }
+    }
+
+    private func computeBounds() {
+        var minX = CGFloat.infinity, minY = CGFloat.infinity
+        var maxX = -CGFloat.infinity, maxY = -CGFloat.infinity
+        for g in galaxies {
+            minX = min(minX, g.center.x - g.radius)
+            maxX = max(maxX, g.center.x + g.radius)
+            minY = min(minY, g.center.y - g.radius)
+            maxY = max(maxY, g.center.y + g.radius)
+        }
+        bounds = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
     }
 
     func position(_ i: Int, t: Double) -> CGPoint {
