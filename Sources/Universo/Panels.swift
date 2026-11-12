@@ -278,3 +278,86 @@ struct Chip: View {
         .glassEffect(.regular, in: .capsule)
     }
 }
+
+struct BottomBar: View {
+    @Bindable var model: Model
+
+    var body: some View {
+        GlassEffectContainer(spacing: 10) {
+            HStack(spacing: 10) {
+                Button("Ajustar vista") { model.fit() }
+                    .buttonStyle(.glass)
+
+                HStack(spacing: 10) {
+                    Text("Conexiones").font(.system(size: 12)).foregroundStyle(muted)
+                    Slider(value: $model.edgeAmount, in: 0...1)
+                        .frame(width: 120)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .glassEffect(.regular, in: .capsule)
+
+                Button(model.rotate ? "Pausar giro" : "Girar galaxias") {
+                    model.setRotation(!model.rotate)
+                }
+                .buttonStyle(.glass)
+
+                Button("Recargar") { model.reload() }
+                    .buttonStyle(.glass)
+
+                Button("Abrir grafo…") { model.openPanel() }
+                    .buttonStyle(.glassProminent)
+                    .tint(Palette.accent)
+            }
+        }
+    }
+}
+
+struct ErrorCard: View {
+    @Bindable var model: Model
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if model.graphChosen {
+                Text("No se pudo abrir el grafo")
+                    .font(.system(size: 22, weight: .bold))
+                Text(model.graphURL.path)
+                    .font(.system(size: 12))
+                    .foregroundStyle(muted)
+                    .textSelection(.enabled)
+                if let e = model.loadError {
+                    Text(e).font(.system(size: 13))
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Causas probables").font(.system(size: 13, weight: .semibold))
+                    Text("• El archivo no existe o se movió de carpeta.")
+                    Text("• graphify todavía no generó graph.json.")
+                    Text("• El archivo no es un graph.json de graphify.")
+                }
+                .font(.system(size: 13))
+                .foregroundStyle(muted)
+                HStack(spacing: 10) {
+                    Button("Reintentar") { model.reload() }.buttonStyle(.glass)
+                    Button("Abrir grafo…") { model.openPanel() }
+                        .buttonStyle(.glassProminent)
+                        .tint(Palette.accent)
+                }
+            } else {
+                Text("Abre un grafo")
+                    .font(.system(size: 22, weight: .bold))
+                Text("Universo dibuja el graph.json que genera graphify: cada comunidad es una galaxia y cada nodo una estrella.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(muted)
+                Text("Arrástralo a esta ventana o usa el botón.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(muted)
+                Button("Abrir grafo…") { model.openPanel() }
+                    .buttonStyle(.glassProminent)
+                    .tint(Palette.accent)
+            }
+        }
+        .padding(24)
+        .frame(width: 460)
+        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+    }
+}
