@@ -30,10 +30,13 @@ enum ScopeChoice: String, CaseIterable, Identifiable {
 
 @Observable
 final class Model {
+    var rawGraph: RawGraph?
+    var hideNoise = true
     var conciseExport = true
     var scopeChoice: ScopeChoice = .vicinity
     var toast: String?
     var baselineTokens = 1
+    var hiddenCount = 0
     var universe: Universe?
     var loadError: String?
     var graphURL: URL
@@ -86,22 +89,47 @@ final class Model {
                 loadError = "El archivo no tiene nodos."
                 return
             }
-            let u = Universe(raw: raw)
+            rawGraph = raw
             graphURL = url
             UserDefaults.standard.set(url.path, forKey: "graphPath")
-            universe = u
             loadError = nil
             selected = nil
-            hovered = nil
             activeGalaxy = nil
-            flight = nil
-                        baselineTokens = tokenEstimate(buildExport(.scope, scope: .all, concise: false, universe: u))
-            updateQuery()
-            fit(animated: false)
-            fitted = true
+            rebuild(animated: false)
         } catch {
             universe = nil
             loadError = error.localizedDescription
+        }
+    }
+
+    static let noiseExtensions: Set<String> = ["yml", "yaml", "json", "xml", "properties", "toml", "css"]
+
+    func isNoise(_ n: RawNode) -> Bool {
+        guard (n.file_type ?? "code") == "code", let f = n.source_file else { return false }
+        return Model.noiseExtensions.contains((f as NSString).pathExtension.lowercased())
+    }
+
+    func rebuild(animated: Bool) {
+        guard let raw = rawGraph else { return }
+        let keepKey = selected.flatMap { i in universe.map { $0.stars[i].key } }
+        var nodes = raw.nodes
+        if hideNoise { nodes = raw.nodes.filter { !isNoise($0) } }
+        hiddenCount = raw.nodes.count - nodes.count
+        let ids = Set(nodes.map(\.id))
+        let links = raw.links.filter { ids.contains($0.source) && ids.contains($0.target) }
+        let u = Universe(raw: RawGraph(nodes: nodes, links: links))
+        universe = u
+        selected = keepKey.flatMap { k in u.stars.firstIndex { $0.key == k } }
+        if let a = activeGalaxy, a >= u.galaxies.count { activeGalaxy = nil }
+        hovered = nil
+        flight = nil
+        baselineTokens = tokenEstimate(buildExport(.scope, scope: .all, concise: false, universe: u))
+        updateQuery()
+        if animated {
+            fit(animated: true)
+        } else {
+            fit(animated: false)
+            fitted = true
         }
     }
 
