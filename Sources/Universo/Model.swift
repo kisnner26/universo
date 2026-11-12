@@ -21,8 +21,19 @@ struct Flight {
     var duration: Double
 }
 
+enum ScopeChoice: String, CaseIterable, Identifiable {
+    case all = "Todo"
+    case galaxy = "Galaxia"
+    case vicinity = "Vecindad"
+    var id: String { rawValue }
+}
+
 @Observable
 final class Model {
+    var conciseExport = true
+    var scopeChoice: ScopeChoice = .vicinity
+    var toast: String?
+    var baselineTokens = 1
     var universe: Universe?
     var loadError: String?
     var graphURL: URL
@@ -84,12 +95,22 @@ final class Model {
             hovered = nil
             activeGalaxy = nil
             flight = nil
-                        updateQuery()
+                        baselineTokens = tokenEstimate(buildExport(.scope, scope: .all, concise: false, universe: u))
+            updateQuery()
             fit(animated: false)
             fitted = true
         } catch {
             universe = nil
             loadError = error.localizedDescription
+        }
+    }
+
+    func flash(_ text: String) {
+        toast = text
+        let current = text
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_400_000_000)
+            if self.toast == current { self.toast = nil }
         }
     }
 
