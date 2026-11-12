@@ -189,15 +189,26 @@ struct SpaceRenderer {
 
         // etiquetas de galaxia
         let galaxyFade = min(1, max(0, (1.5 - sc) / 0.6))
+        var galaxyTaken: [CGRect] = []
         if galaxyFade > 0 {
-            for (gi, g) in u.galaxies.enumerated() {
+            let order = u.galaxies.indices.sorted {
+                if $0 == focusGalaxy { return true }
+                if $1 == focusGalaxy { return false }
+                return u.galaxies[$0].members.count > u.galaxies[$1].members.count
+            }
+            for gi in order {
+                let g = u.galaxies[gi]
                 if g.members.count < 6 && sc < 0.55 { continue }
                 let c = S(g.center)
                 guard onScreen.contains(c) else { continue }
+                let y = c.y - g.radius * sc * 0.82 * Double(u.tilt) - 10
+                let w = Double(g.name.count) * 7.0 + 10
+                let rect = CGRect(x: c.x - w / 2, y: y - 18, width: w, height: 18)
+                if gi != focusGalaxy, galaxyTaken.contains(where: { $0.intersects(rect) }) { continue }
+                galaxyTaken.append(rect)
                 var op = galaxyFade * 0.9
                 if let f = focusGalaxy, f != gi { op *= 0.5 }
                 if sel != nil { op *= 0.5 }
-                let y = c.y - g.radius * sc * 0.82 * Double(u.tilt) - 10
                 let txt = ctx.resolve(
                     Text(g.name).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color.white.opacity(op))
                 )
