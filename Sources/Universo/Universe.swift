@@ -36,6 +36,7 @@ struct Star {
 }
 
 struct Galaxy {
+    var community = -1
     var name: String
     var members: [Int]
     var center = CGPoint.zero
@@ -85,12 +86,14 @@ final class Universe {
         var index: [String: Int] = [:]
         var gmap: [Int: Int] = [:]
         var gnames: [String] = []
+        var gcomm: [Int] = []
 
         for n in raw.nodes {
             let c = n.community ?? -1
             if gmap[c] == nil {
                 gmap[c] = gnames.count
                 gnames.append(n.community_name ?? "Sin galaxia")
+                gcomm.append(c)
             }
             index[n.id] = stars.count
             stars.append(Star(
@@ -125,8 +128,9 @@ final class Universe {
         }
 
         galaxies = gnames.enumerated().map { i, name in
-            let hue = (Double(i) * 0.61803398875).truncatingRemainder(dividingBy: 1)
+            let hue = (Double(gcomm[i] + 3) * 0.61803398875).truncatingRemainder(dividingBy: 1)
             return Galaxy(
+                community: gcomm[i],
                 name: name,
                 members: [],
                 spin: 0.014 + 0.02 * rng.next(),
