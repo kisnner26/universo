@@ -57,7 +57,10 @@ struct RootView: View {
             model.load(url: url)
             return true
         }
-        .onAppear { installScrollMonitor() }
+        .onAppear {
+            installScrollMonitor()
+            applyLaunchArguments(model)
+        }
         .onDisappear {
             if let m = monitor { NSEvent.removeMonitor(m) }
         }
@@ -79,6 +82,59 @@ struct RootView: View {
             }
             return nil
         }
+    }
+}
+
+@MainActor
+func applyLaunchArguments(_ model: Model) {
+    let args = CommandLine.arguments
+    func value(_ flag: String) -> String? {
+        guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+    if let g = value("--graph") {
+        model.load(url: URL(fileURLWithPath: g), persist: false)
+    }
+    if let q = value("--select")?.lowercased(), let u = model.universe,
+       let idx = u.stars.indices.first(where: { u.stars[$0].label.lowercased().contains(q) }) {
+        model.select(idx, fly: false)
+        model.debugFocus(idx)
+    }
+    if let s = value("--scope"), let c = ScopeChoice.allCases.first(where: { $0.rawValue.lowercased() == s.lowercased() }) {
+        model.scopeChoice = c
+    }
+    if value("--noise") == "off" {
+        model.hideNoise = false
+        model.rebuild(animated: false)
+    }
+    if args.contains("--toast") { model.copyExport(.scope) }
+    guard let out = value("--live") else { return }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.windows.first(where: { $0.isVisible })?.makeKeyAndOrderFront(nil)
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+        guard let w = NSApp.windows.first(where: { $0.isVisible }) else {
+            print("live: sin ventana")
+            exit(1)
+        }
+        typealias Fn = @convention(c) (CGRect, UInt32, UInt32, UInt32) -> Unmanaged<CGImage>?
+        guard let sym = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGWindowListCreateImage") else {
+            print("live: CGWindowListCreateImage no disponible")
+            exit(1)
+        }
+        let fn = unsafeBitCast(sym, to: Fn.self)
+        // optionIncludingWindow = 1<<3, boundsIgnoreFraming = 1<<0
+        guard let img = fn(.null, 1 << 3, UInt32(w.windowNumber), 1 << 0)?.takeRetainedValue() else {
+            print("live: captura nula")
+            exit(1)
+        }
+        let rep = NSBitmapImageRep(cgImage: img)
+        if let png = rep.representation(using: .png, properties: [:]) {
+            try? png.write(to: URL(fileURLWithPath: out))
+            print("live ok", out, img.width, img.height)
+        }
+        exit(0)
     }
 }
 

@@ -81,7 +81,7 @@ final class Model {
         load(url: graphURL)
     }
 
-    func load(url: URL) {
+    func load(url: URL, persist: Bool = true) {
         graphChosen = true
         do {
             let data = try Data(contentsOf: url)
@@ -93,7 +93,7 @@ final class Model {
             }
             rawGraph = raw
             graphURL = url
-            UserDefaults.standard.set(url.path, forKey: "graphPath")
+            if persist { UserDefaults.standard.set(url.path, forKey: "graphPath") }
             loadError = nil
             selected = nil
             activeGalaxy = nil
@@ -272,6 +272,12 @@ final class Model {
         let tEnd = time(at: now.timeIntervalSinceReferenceDate + 0.9)
         let p = u.position(i, t: tEnd)
         fly(to: camera(centering: p, scale: min(3.2, max(cam.scale, 1.5)), rightPanel: true))
+    }
+
+    func debugFocus(_ i: Int) {
+        guard let u = universe else { return }
+        base = camera(centering: u.position(i, t: 0), scale: 1.8, rightPanel: true)
+        flight = nil
     }
 
     func clearSelection() {
