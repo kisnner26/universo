@@ -32,13 +32,19 @@ struct RootView: View {
                 .padding(12)
                 .animation(.smooth(duration: 0.3), value: model.selected)
 
-                VStack {
+                VStack(spacing: 10) {
+                    ToolsBar(model: model)
+                        .padding(.top, 14)
                     Spacer()
-                    BottomBar(model: model)
+                    if let t = model.toast {
+                        ToastView(text: t)
+                    }
+                    ContextCard(model: model)
                         .padding(.bottom, 18)
-                        .padding(.leading, CGFloat(Model.insetLeft) - 12)
-                        .padding(.trailing, model.selected != nil ? CGFloat(Model.insetRight) - 12 : 0)
                 }
+                .padding(.leading, CGFloat(Model.insetLeft) - 12)
+                .padding(.trailing, model.selected != nil ? CGFloat(Model.insetRight) - 12 : 0)
+                .animation(.smooth(duration: 0.25), value: model.toast)
             } else {
                 ErrorCard(model: model)
             }

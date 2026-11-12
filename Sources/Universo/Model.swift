@@ -59,6 +59,8 @@ final class Model {
 
     static let insetLeft: Double = 312
     static let insetRight: Double = 352
+    static let insetTop: Double = 64
+    static let insetBottom: Double = 236
 
     init() {
         let saved = UserDefaults.standard.string(forKey: "graphPath")
@@ -216,14 +218,14 @@ final class Model {
     private func visibleSize(rightPanel: Bool) -> CGSize {
         CGSize(
             width: max(200, viewSize.width - Model.insetLeft - (rightPanel ? Model.insetRight : 0)),
-            height: max(200, viewSize.height - 110)
+            height: max(200, viewSize.height - Model.insetTop - Model.insetBottom)
         )
     }
 
     private func camera(centering p: CGPoint, scale: Double, rightPanel: Bool) -> Camera {
         Camera(
             cx: Double(p.x) - visibleOffset(rightPanel: rightPanel) / scale,
-            cy: Double(p.y),
+            cy: Double(p.y) - (Model.insetTop - Model.insetBottom) / 2 / scale,
             scale: scale
         )
     }

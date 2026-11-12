@@ -279,7 +279,7 @@ struct Chip: View {
     }
 }
 
-struct BottomBar: View {
+struct ToolsBar: View {
     @Bindable var model: Model
 
     var body: some View {
@@ -289,9 +289,13 @@ struct BottomBar: View {
                     .buttonStyle(.glass)
 
                 HStack(spacing: 10) {
-                    Text("Conexiones").font(.system(size: 12)).foregroundStyle(muted)
+                    Text("Conexiones")
+                        .font(.system(size: 12))
+                        .foregroundStyle(muted)
+                        .lineLimit(1)
+                        .fixedSize()
                     Slider(value: $model.edgeAmount, in: 0...1)
-                        .frame(width: 120)
+                        .frame(width: 110)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 9)
@@ -306,10 +310,127 @@ struct BottomBar: View {
                     .buttonStyle(.glass)
 
                 Button("Abrir grafo…") { model.openPanel() }
+                    .buttonStyle(.glass)
+            }
+        }
+    }
+}
+
+struct ToggleChip: View {
+    let title: String
+    let isOn: Bool
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(isOn ? Palette.accent : Color.white.opacity(0.25))
+                    .frame(width: 8, height: 8)
+                Text(title).font(.system(size: 12.5, weight: .medium))
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 8)
+            .glassEffect(isOn ? .regular.tint(Palette.accent.opacity(0.30)) : .regular, in: .capsule)
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+}
+
+struct ToastView: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12.5, weight: .medium))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
+            .glassEffect(.regular, in: .capsule)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}
+
+struct ContextCard: View {
+    @Bindable var model: Model
+
+    var body: some View {
+        let scope = model.effectiveScope
+        let tokens = model.currentExportTokens(.scope)
+        let baseline = max(1, model.baselineTokens)
+        let frac = min(1, Double(tokens) / Double(baseline))
+        let saved = max(0, Int((1 - frac) * 100))
+        let subtitle: String = {
+            let t = model.scopeTitle(scope)
+            return model.scopeIsFallback ? "\(t) · elige una galaxia o un nodo para acotar" : t
+        }()
+
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Contexto para IA").font(.system(size: 17, weight: .semibold))
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(muted)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Picker("Alcance", selection: $model.scopeChoice) {
+                    ForEach(ScopeChoice.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 236)
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.10))
+                        Capsule().fill(Palette.accent).frame(width: max(8, g.size.width * frac))
+                    }
+                }
+                .frame(height: 8)
+                HStack(spacing: 6) {
+                    Text("~\(formatTokens(tokens)) tokens").font(.system(size: 13, weight: .semibold))
+                    Text("de ~\(formatTokens(baseline)) del grafo completo · \(saved) % menos")
+                        .font(.system(size: 12))
+                        .foregroundStyle(muted)
+                }
+            }
+
+            HStack(spacing: 8) {
+                ToggleChip(
+                    title: "Conciso", isOn: model.conciseExport,
+                    help: "Modo caveman: sin prosa, una línea por nodo"
+                ) { model.conciseExport.toggle() }
+                ToggleChip(
+                    title: "Sin ruido", isOn: model.hideNoise,
+                    help: model.hiddenCount > 0
+                        ? "Oculta \(model.hiddenCount) nodos de configuración (YAML, JSON, XML)"
+                        : "Oculta nodos de configuración (YAML, JSON, XML)"
+                ) {
+                    model.hideNoise.toggle()
+                    model.rebuild(animated: true)
+                }
+                Spacer(minLength: 6)
+                Button("Resumen") { model.copyExport(.summary) }
+                    .buttonStyle(.glass)
+                Button("Sesión nueva") { model.copyExport(.session) }
+                    .buttonStyle(.glass)
+                Button("Copiar contexto") { model.copyExport(.scope) }
                     .buttonStyle(.glassProminent)
                     .tint(Palette.accent)
             }
+
+            Text("Se copia como Markdown con el prefijo estable primero, para que el caché de prompts lo reutilice.")
+                .font(.system(size: 11))
+                .foregroundStyle(muted)
         }
+        .padding(18)
+        .frame(width: 640)
+        .glassEffect(.regular, in: .rect(cornerRadius: 28))
     }
 }
 
