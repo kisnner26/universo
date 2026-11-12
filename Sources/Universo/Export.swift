@@ -16,6 +16,25 @@ func tokenEstimate(_ s: String) -> Int {
     max(1, s.count / 4)
 }
 
+func relationLabel(_ raw: String) -> String {
+    switch raw {
+    case "", "references": return "se relaciona con"
+    case "conceptually_related_to": return "tiene relación conceptual con"
+    case "contains": return "contiene"
+    case "calls": return "llama a"
+    case "implements": return "implementa"
+    case "imports", "imports_from": return "importa"
+    case "cites": return "cita"
+    case "shares_data_with": return "comparte datos con"
+    case "semantically_similar_to": return "se parece a"
+    case "rationale_for": return "justifica a"
+    case "uses": return "usa"
+    case "method": return "tiene el método"
+    case "inherits": return "hereda de"
+    default: return raw.replacingOccurrences(of: "_", with: " ")
+    }
+}
+
 func formatTokens(_ n: Int) -> String {
     n >= 1000 ? String(format: "%.1fk", Double(n) / 1000) : "\(n)"
 }
@@ -99,7 +118,7 @@ extension Model {
         var edgeLines: [String] = []
         var seen = Set<String>()
         for l in u.links where inScope.contains(l.a) && inScope.contains(l.b) {
-            let rel = l.relation.isEmpty ? "relacionado" : l.relation.replacingOccurrences(of: "_", with: " ")
+            let rel = relationLabel(l.relation)
             let flag = l.confidence == "EXTRACTED" ? "" : " [\(l.confidence.lowercased())]"
             let line = concise
                 ? "\(u.stars[l.a].label) -\(rel)-> \(u.stars[l.b].label)\(flag)"

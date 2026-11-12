@@ -253,8 +253,7 @@ struct DetailCard: View {
     }
 
     private func relationText(_ l: Link) -> String {
-        var r = l.relation.replacingOccurrences(of: "_", with: " ")
-        if r.isEmpty { r = "relacionado" }
+        var r = relationLabel(l.relation)
         switch l.confidence {
         case "INFERRED": r += " · inferida"
         case "AMBIGUOUS": r += " · ambigua"
